@@ -1,0 +1,51 @@
+{
+  "window": {
+    "monitor": 0,
+    "alignment": "topRight",
+    "marginX": 30,
+    "marginY": 30,
+    "width": 420,
+    "height": 1200,
+    "opacity": 245
+  },
+  "font": {
+    "family": "Segoe UI",
+    "size": 24,
+    "boldTitle": true
+  },
+  "style": {
+    "textColor": "#FFFFFF",
+    "labelColor": "#FFFFFF",
+    "dimColor": "#AAAAAA",
+    "errorColor": "#FF8888",
+    "positiveColor": "#88FF88",
+    "negativeColor": "#FF8888",
+    "barBgColor": "#444444",
+    "barNormalColor": "#44AAFF",
+    "barWarnColor": "#FFAA44",
+    "barCritColor": "#FF4444",
+    "separatorColor": "#888888",
+    "sectionPadding": 16,
+    "linePadding": 4,
+    "horizontalPad": 16,
+    "barHeight": 8,
+    "textShadow": true
+  },
+  "exchange": {
+    "baseCurrency": "JPY",
+    "groups": [
+      { "name": "ASEAN", "targets": ["IDR", "THB", "MYR", "PHP", "SGD"] },
+      { "name": "Americas", "targets": ["USD", "CAD", "MXN", "BRL", "CLP"] },
+      { "name": "Europe", "targets": ["EUR", "GBP", "CHF", "NOK", "SEK"] },
+      { "name": "Asia Pacific", "targets": ["CNY", "INR", "KRW", "AUD", "HKD"] }
+    ],
+    "refreshMinutes": 60
+  },
+  "stocks": {
+    "provider": "alphavantage",
+    "apiKey": "",
+    "symbols": ["AAPL", "GOOGL", "MSFT"],
+    "refreshMinutes": 240,
+    "columns": 2
+  }
+}
