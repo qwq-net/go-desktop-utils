@@ -85,38 +85,50 @@ func render(hdc uintptr) {
 	y := int32(style.SectionPadding)
 	lineH := int32(cfg.Font.Size) + int32(style.LinePadding)
 
+	drawnSections := 0
+
 	// Exchange Rate Groups
-	for i, group := range cfg.Exchange.Groups {
-		if i > 0 {
-			y += int32(style.SectionPadding) / 2
+	if cfg.Exchange.Enabled {
+		for i, group := range cfg.Exchange.Groups {
+			if i > 0 {
+				y += int32(style.SectionPadding) / 2
+			}
+			y = drawCurrencyGroup(hdc, &state, cfg, colors, hFontBold, hFont, group, y, pad, contentWidth, lineH)
 		}
-		y = drawCurrencyGroup(hdc, &state, cfg, colors, hFontBold, hFont, group, y, pad, contentWidth, lineH)
+		if !state.ExchangeTime.IsZero() {
+			selectObject(hdc, hFontSmall)
+			timeStr := fmt.Sprintf("Updated %s", state.ExchangeTime.Format("15:04"))
+			rc := RECT{pad, y, pad + contentWidth, y + lineH*3/4}
+			drawShadowedText(hdc, timeStr, &rc, DT_RIGHT|DT_SINGLELINE|DT_NOCLIP, colors.Dim)
+			y += lineH * 3 / 4
+		}
+		drawnSections++
 	}
 
-	// Update time for exchange
-	if !state.ExchangeTime.IsZero() {
-		selectObject(hdc, hFontSmall)
-		timeStr := fmt.Sprintf("Updated %s", state.ExchangeTime.Format("15:04"))
-		rc := RECT{pad, y, pad + contentWidth, y + lineH*3/4}
-		drawShadowedText(hdc, timeStr, &rc, DT_RIGHT|DT_SINGLELINE|DT_NOCLIP, colors.Dim)
-		y += lineH * 3 / 4
+	// Stocks
+	if cfg.Stocks.Enabled {
+		if drawnSections > 0 {
+			y += int32(style.SectionPadding)
+			if style.ShowSeparator {
+				y = drawSeparator(hdc, colors, y, pad, contentWidth)
+			}
+			y += int32(style.SectionPadding)
+		}
+		y = drawStockSection(hdc, &state, cfg, colors, hFont, hFontBold, hFontSmall, y, pad, contentWidth, lineH)
+		drawnSections++
 	}
-
-	// Separator
-	y += int32(style.SectionPadding)
-	y = drawSeparator(hdc, colors, y, pad, contentWidth)
-	y += int32(style.SectionPadding)
-
-	// Stocks (2-column)
-	y = drawStockSection(hdc, &state, cfg, colors, hFont, hFontBold, hFontSmall, y, pad, contentWidth, lineH)
-
-	// Separator
-	y += int32(style.SectionPadding)
-	y = drawSeparator(hdc, colors, y, pad, contentWidth)
-	y += int32(style.SectionPadding)
 
 	// System Info
-	drawSysInfoSection(hdc, &state, cfg, colors, hFont, hFontBold, y, pad, contentWidth, lineH)
+	if cfg.System.Enabled {
+		if drawnSections > 0 {
+			y += int32(style.SectionPadding)
+			if style.ShowSeparator {
+				y = drawSeparator(hdc, colors, y, pad, contentWidth)
+			}
+			y += int32(style.SectionPadding)
+		}
+		drawSysInfoSection(hdc, &state, cfg, colors, hFont, hFontBold, y, pad, contentWidth, lineH)
+	}
 }
 
 func drawSeparator(hdc uintptr, colors ParsedColors, y, x, width int32) int32 {
@@ -139,7 +151,9 @@ func drawCurrencyGroup(hdc uintptr, state *RenderState, cfg *Config, colors Pars
 	drawShadowedText(hdc, group.Name, &rc, DT_LEFT|DT_SINGLELINE|DT_NOCLIP, colors.Label)
 	y += lineH
 
-	y = drawSeparator(hdc, colors, y, pad, contentWidth)
+	if cfg.Style.ShowSeparator {
+		y = drawSeparator(hdc, colors, y, pad, contentWidth)
+	}
 	y += int32(cfg.Style.LinePadding)
 
 	selectObject(hdc, hFont)
@@ -193,7 +207,9 @@ func drawStockSection(hdc uintptr, state *RenderState, cfg *Config, colors Parse
 	rc := RECT{pad, y, pad + contentWidth, y + lineH}
 	drawShadowedText(hdc, "Stocks", &rc, DT_LEFT|DT_SINGLELINE|DT_NOCLIP, colors.Label)
 	y += lineH
-	y = drawSeparator(hdc, colors, y, pad, contentWidth)
+	if cfg.Style.ShowSeparator {
+		y = drawSeparator(hdc, colors, y, pad, contentWidth)
+	}
 	y += int32(cfg.Style.LinePadding)
 
 	selectObject(hdc, hFont)
@@ -280,7 +296,9 @@ func drawSysInfoSection(hdc uintptr, state *RenderState, cfg *Config, colors Par
 	rc := RECT{pad, y, pad + contentWidth, y + lineH}
 	drawShadowedText(hdc, "System", &rc, DT_LEFT|DT_SINGLELINE|DT_NOCLIP, colors.Label)
 	y += lineH
-	y = drawSeparator(hdc, colors, y, pad, contentWidth)
+	if cfg.Style.ShowSeparator {
+		y = drawSeparator(hdc, colors, y, pad, contentWidth)
+	}
 	y += int32(cfg.Style.LinePadding)
 
 	selectObject(hdc, hFont)

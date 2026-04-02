@@ -16,7 +16,7 @@
   "style": {
     "textColor": "#FFFFFF",
     "labelColor": "#FFFFFF",
-    "dimColor": "#AAAAAA",
+    "dimColor": "#FFFFFF",
     "errorColor": "#FF8888",
     "positiveColor": "#88FF88",
     "negativeColor": "#FF8888",
@@ -29,9 +29,11 @@
     "linePadding": 4,
     "horizontalPad": 16,
     "barHeight": 8,
-    "textShadow": false
+    "textShadow": false,
+    "showSeparator": false
   },
   "exchange": {
+    "enabled": true,
     "baseCurrency": "JPY",
     "groups": [
       { "name": "ASEAN", "targets": ["IDR", "THB", "MYR", "PHP", "SGD"] },
@@ -42,10 +44,14 @@
     "refreshMinutes": 60
   },
   "stocks": {
+    "enabled": false,
     "provider": "alphavantage",
     "apiKey": "",
     "symbols": ["AAPL", "GOOGL", "MSFT"],
     "refreshMinutes": 240,
     "columns": 2
+  },
+  "system": {
+    "enabled": true
   }
 }

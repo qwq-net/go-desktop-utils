@@ -90,8 +90,12 @@ func main() {
 	procShowWindow.Call(appHwnd, SW_SHOW)
 	procUpdateWindow.Call(appHwnd)
 
-	go sysInfoLoop(appHwnd)
-	go marketDataLoop(appHwnd, cfg)
+	if cfg.System.Enabled {
+		go sysInfoLoop(appHwnd)
+	}
+	if cfg.Exchange.Enabled || cfg.Stocks.Enabled {
+		go marketDataLoop(appHwnd, cfg)
+	}
 
 	messageLoop()
 

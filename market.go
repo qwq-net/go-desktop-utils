@@ -130,35 +130,46 @@ func fetchExchangeRates(cfg *Config) (map[string]float64, error) {
 // --- Market Data Loop ---
 
 func marketDataLoop(hwnd uintptr, cfg *Config) {
-	exchangeTicker := time.NewTicker(time.Duration(cfg.Exchange.RefreshMinutes) * time.Minute)
-	defer exchangeTicker.Stop()
+	var exchangeTicker *time.Ticker
+	if cfg.Exchange.Enabled {
+		exchangeTicker = time.NewTicker(time.Duration(cfg.Exchange.RefreshMinutes) * time.Minute)
+		defer exchangeTicker.Stop()
+	}
 
 	var stockTicker *time.Ticker
 	var stockFetcher StockFetcher
 
-	if cfg.Stocks.APIKey != "" && len(cfg.Stocks.Symbols) > 0 {
+	if cfg.Stocks.Enabled && cfg.Stocks.APIKey != "" && len(cfg.Stocks.Symbols) > 0 {
 		stockFetcher = NewStockFetcher(&cfg.Stocks)
 		stockTicker = time.NewTicker(time.Duration(cfg.Stocks.RefreshMinutes) * time.Minute)
 		defer stockTicker.Stop()
 	}
 
 	// Immediate first fetch
-	fetchExchange(hwnd, cfg)
+	if cfg.Exchange.Enabled {
+		fetchExchange(hwnd, cfg)
+	}
 	if stockFetcher != nil {
 		fetchStocks(hwnd, cfg, stockFetcher)
 	}
 
 	for {
-		if stockTicker != nil {
+		switch {
+		case exchangeTicker != nil && stockTicker != nil:
 			select {
 			case <-exchangeTicker.C:
 				fetchExchange(hwnd, cfg)
 			case <-stockTicker.C:
 				fetchStocks(hwnd, cfg, stockFetcher)
 			}
-		} else {
+		case exchangeTicker != nil:
 			<-exchangeTicker.C
 			fetchExchange(hwnd, cfg)
+		case stockTicker != nil:
+			<-stockTicker.C
+			fetchStocks(hwnd, cfg, stockFetcher)
+		default:
+			return
 		}
 	}
 }

@@ -17,6 +17,7 @@ type Config struct {
 	Style    StyleConfig    `json:"style"`
 	Exchange ExchangeConfig `json:"exchange"`
 	Stocks   StocksConfig   `json:"stocks"`
+	System   SystemConfig   `json:"system"`
 }
 
 type WindowConfig struct {
@@ -52,9 +53,11 @@ type StyleConfig struct {
 	HorizontalPad  int    `json:"horizontalPad"`
 	BarHeight      int    `json:"barHeight"`
 	TextShadow     bool   `json:"textShadow"`
+	ShowSeparator  bool   `json:"showSeparator"`
 }
 
 type ExchangeConfig struct {
+	Enabled        bool            `json:"enabled"`
 	BaseCurrency   string          `json:"baseCurrency"`
 	Groups         []CurrencyGroup `json:"groups"`
 	RefreshMinutes int             `json:"refreshMinutes"`
@@ -66,11 +69,16 @@ type CurrencyGroup struct {
 }
 
 type StocksConfig struct {
+	Enabled        bool     `json:"enabled"`
 	Provider       string   `json:"provider"`
 	APIKey         string   `json:"apiKey"`
 	Symbols        []string `json:"symbols"`
 	RefreshMinutes int      `json:"refreshMinutes"`
 	Columns        int      `json:"columns"` // 1 or 2
+}
+
+type SystemConfig struct {
+	Enabled bool `json:"enabled"`
 }
 
 type ParsedColors struct {
@@ -99,7 +107,7 @@ func defaultConfig() Config {
 		Style: StyleConfig{
 			TextColor:      "#FFFFFF",
 			LabelColor:     "#FFFFFF",
-			DimColor:       "#AAAAAA",
+			DimColor:       "#FFFFFF",
 			ErrorColor:     "#FF8888",
 			PositiveColor:  "#88FF88",
 			NegativeColor:  "#FF8888",
@@ -113,8 +121,10 @@ func defaultConfig() Config {
 			HorizontalPad:  16,
 			BarHeight:      8,
 			TextShadow:     false,
+			ShowSeparator:  false,
 		},
 		Exchange: ExchangeConfig{
+			Enabled:      true,
 			BaseCurrency: "JPY",
 			Groups: []CurrencyGroup{
 				{Name: "ASEAN", Targets: []string{"IDR", "THB", "MYR", "PHP", "SGD"}},
@@ -125,11 +135,15 @@ func defaultConfig() Config {
 			RefreshMinutes: 60,
 		},
 		Stocks: StocksConfig{
+			Enabled:        false,
 			Provider:       "alphavantage",
 			APIKey:         "",
 			Symbols:        []string{"AAPL", "GOOGL", "MSFT"},
 			RefreshMinutes: 240,
 			Columns:        2,
+		},
+		System: SystemConfig{
+			Enabled: true,
 		},
 	}
 }
