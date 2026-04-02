@@ -8,9 +8,10 @@ tasks:
   build:
     desc: Build Windows GUI binary
     cmds:
-      - GOOS=windows GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -o {{.OUTPUT}} .
+      - GOOS=windows GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -o {{.OUTPUT}} ./cmd/desktop-widget
     sources:
-      - "*.go"
+      - cmd/**/*.go
+      - internal/**/*.go
       - go.mod
       - go.sum
     generates:
@@ -21,10 +22,22 @@ tasks:
     cmds:
       - go mod tidy
 
+  dist:
+    desc: Create distribution zip
+    deps: [build]
+    vars:
+      DIST_DIR: dist/desktop-widget
+    cmds:
+      - rm -rf dist
+      - mkdir -p {{.DIST_DIR}}
+      - cp {{.OUTPUT}} {{.DIST_DIR}}/
+      - cp configs/config.json {{.DIST_DIR}}/
+      - cd dist && zip -r desktop-widget.zip desktop-widget/
+
   clean:
     desc: Remove build artifacts
     cmds:
-      - rm -f {{.OUTPUT}}
+      - rm -rf {{.OUTPUT}} dist
 
   default:
     desc: Build (default task)

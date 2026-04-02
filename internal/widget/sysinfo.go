@@ -1,29 +1,30 @@
 //go:build windows
 
-package main
+package widget
 
 import (
 	"time"
+
+	"go-desktop-utils/internal/w32"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-func sysInfoLoop(hwnd uintptr) {
-	// First call with 1s interval to get a valid baseline
-	collectSysInfo(time.Second)
-	postRefresh(hwnd)
+func (a *App) SysInfoLoop() {
+	collectSysInfo(a, time.Second)
+	w32.PostRefresh(a.Hwnd)
 
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		collectSysInfo(0)
-		postRefresh(hwnd)
+		collectSysInfo(a, 0)
+		w32.PostRefresh(a.Hwnd)
 	}
 }
 
-func collectSysInfo(cpuInterval time.Duration) {
+func collectSysInfo(a *App, cpuInterval time.Duration) {
 	cpuVal := 0.0
 	if percents, err := cpu.Percent(cpuInterval, false); err == nil && len(percents) > 0 {
 		cpuVal = percents[0]
@@ -36,10 +37,10 @@ func collectSysInfo(cpuInterval time.Duration) {
 		memTotalGB = float64(v.Total) / (1024 * 1024 * 1024)
 	}
 
-	appState.mu.Lock()
-	appState.cpuPercent = cpuVal
-	appState.memPercent = memPercent
-	appState.memUsedGB = memUsedGB
-	appState.memTotalGB = memTotalGB
-	appState.mu.Unlock()
+	a.State.Mu.Lock()
+	a.State.CpuPercent = cpuVal
+	a.State.MemPercent = memPercent
+	a.State.MemUsedGB = memUsedGB
+	a.State.MemTotalGB = memTotalGB
+	a.State.Mu.Unlock()
 }

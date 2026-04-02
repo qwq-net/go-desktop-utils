@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package widget
 
 import (
 	"encoding/json"
@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"go-desktop-utils/internal/w32"
 )
 
 type Config struct {
@@ -74,7 +76,7 @@ type StocksConfig struct {
 	APIKey         string   `json:"apiKey"`
 	Symbols        []string `json:"symbols"`
 	RefreshMinutes int      `json:"refreshMinutes"`
-	Columns        int      `json:"columns"` // 1 or 2
+	Columns        int      `json:"columns"`
 }
 
 type SystemConfig struct {
@@ -95,7 +97,7 @@ type ParsedColors struct {
 	Separator uint32
 }
 
-func defaultConfig() Config {
+func DefaultConfig() Config {
 	return Config{
 		Window: WindowConfig{
 			Monitor: 0, Alignment: "topRight", MarginX: 30, MarginY: 30,
@@ -112,9 +114,9 @@ func defaultConfig() Config {
 			PositiveColor:  "#88FF88",
 			NegativeColor:  "#FF8888",
 			BarBgColor:     "#444444",
-			BarNormalColor:  "#44AAFF",
-			BarWarnColor:    "#FFAA44",
-			BarCritColor:    "#FF4444",
+			BarNormalColor: "#44AAFF",
+			BarWarnColor:   "#FFAA44",
+			BarCritColor:   "#FF4444",
 			SeparatorColor: "#888888",
 			SectionPadding: 16,
 			LinePadding:    4,
@@ -148,7 +150,7 @@ func defaultConfig() Config {
 	}
 }
 
-func configPath() string {
+func ConfigPath() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return "config.json"
@@ -157,11 +159,11 @@ func configPath() string {
 }
 
 func LoadConfig() (*Config, error) {
-	path := configPath()
+	path := ConfigPath()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			cfg := defaultConfig()
+			cfg := DefaultConfig()
 			if writeErr := writeDefaultConfig(path, &cfg); writeErr != nil {
 				fmt.Fprintf(os.Stderr, "warning: could not write default config: %v\n", writeErr)
 			}
@@ -170,7 +172,7 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
-	cfg := defaultConfig()
+	cfg := DefaultConfig()
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
@@ -188,36 +190,22 @@ func writeDefaultConfig(path string, cfg *Config) error {
 }
 
 func clampConfig(cfg *Config) {
-	if cfg.Window.Width < 100 {
-		cfg.Window.Width = 100
+	clamp := func(v *int, min, max int) {
+		if *v < min {
+			*v = min
+		}
+		if max > 0 && *v > max {
+			*v = max
+		}
 	}
-	if cfg.Window.Height < 100 {
-		cfg.Window.Height = 100
-	}
-	if cfg.Window.Opacity < 0 {
-		cfg.Window.Opacity = 0
-	}
-	if cfg.Window.Opacity > 255 {
-		cfg.Window.Opacity = 255
-	}
-	if cfg.Font.Size < 8 {
-		cfg.Font.Size = 8
-	}
-	if cfg.Font.Size > 72 {
-		cfg.Font.Size = 72
-	}
-	if cfg.Style.SectionPadding < 0 {
-		cfg.Style.SectionPadding = 0
-	}
-	if cfg.Style.LinePadding < 0 {
-		cfg.Style.LinePadding = 0
-	}
-	if cfg.Style.HorizontalPad < 0 {
-		cfg.Style.HorizontalPad = 0
-	}
-	if cfg.Style.BarHeight < 2 {
-		cfg.Style.BarHeight = 2
-	}
+	clamp(&cfg.Window.Width, 100, 0)
+	clamp(&cfg.Window.Height, 100, 0)
+	clamp(&cfg.Window.Opacity, 0, 255)
+	clamp(&cfg.Font.Size, 8, 72)
+	clamp(&cfg.Style.SectionPadding, 0, 0)
+	clamp(&cfg.Style.LinePadding, 0, 0)
+	clamp(&cfg.Style.HorizontalPad, 0, 0)
+	clamp(&cfg.Style.BarHeight, 2, 0)
 	if cfg.Exchange.RefreshMinutes < 1 {
 		cfg.Exchange.RefreshMinutes = 60
 	}
@@ -231,21 +219,20 @@ func clampConfig(cfg *Config) {
 
 func (cfg *Config) ParseColors() ParsedColors {
 	return ParsedColors{
-		Text:      parseColor(cfg.Style.TextColor, rgb(255, 255, 255)),
-		Label:     parseColor(cfg.Style.LabelColor, rgb(187, 187, 187)),
-		Dim:       parseColor(cfg.Style.DimColor, rgb(119, 119, 119)),
-		Error:     parseColor(cfg.Style.ErrorColor, rgb(255, 102, 102)),
-		Positive:  parseColor(cfg.Style.PositiveColor, rgb(102, 255, 102)),
-		Negative:  parseColor(cfg.Style.NegativeColor, rgb(255, 102, 102)),
-		BarBg:     parseColor(cfg.Style.BarBgColor, rgb(51, 51, 51)),
-		BarNormal: parseColor(cfg.Style.BarNormalColor, rgb(68, 170, 255)),
-		BarWarn:   parseColor(cfg.Style.BarWarnColor, rgb(255, 170, 68)),
-		BarCrit:   parseColor(cfg.Style.BarCritColor, rgb(255, 68, 68)),
-		Separator: parseColor(cfg.Style.SeparatorColor, rgb(85, 85, 85)),
+		Text:      parseColor(cfg.Style.TextColor, w32.RGB(255, 255, 255)),
+		Label:     parseColor(cfg.Style.LabelColor, w32.RGB(255, 255, 255)),
+		Dim:       parseColor(cfg.Style.DimColor, w32.RGB(255, 255, 255)),
+		Error:     parseColor(cfg.Style.ErrorColor, w32.RGB(255, 136, 136)),
+		Positive:  parseColor(cfg.Style.PositiveColor, w32.RGB(136, 255, 136)),
+		Negative:  parseColor(cfg.Style.NegativeColor, w32.RGB(255, 136, 136)),
+		BarBg:     parseColor(cfg.Style.BarBgColor, w32.RGB(68, 68, 68)),
+		BarNormal: parseColor(cfg.Style.BarNormalColor, w32.RGB(68, 170, 255)),
+		BarWarn:   parseColor(cfg.Style.BarWarnColor, w32.RGB(255, 170, 68)),
+		BarCrit:   parseColor(cfg.Style.BarCritColor, w32.RGB(255, 68, 68)),
+		Separator: parseColor(cfg.Style.SeparatorColor, w32.RGB(136, 136, 136)),
 	}
 }
 
-// AllTargets returns a deduplicated list of all target currencies across all groups.
 func (cfg *Config) AllTargets() []string {
 	seen := make(map[string]bool)
 	var targets []string
@@ -265,7 +252,7 @@ func parseColor(hex string, fallback uint32) uint32 {
 	if err != nil {
 		return fallback
 	}
-	return rgb(r, g, b)
+	return w32.RGB(r, g, b)
 }
 
 func parseHexColor(s string) (r, g, b byte, err error) {

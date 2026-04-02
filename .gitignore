@@ -1,1 +1,24 @@
+# Build artifacts
 *.exe
+
+# Distribution
+dist/
+
+# Task runner
+.task/
+
+# Go
+*.test
+*.out
+*.prof
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

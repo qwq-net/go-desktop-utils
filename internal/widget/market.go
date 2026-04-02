@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package widget
 
 import (
 	"encoding/json"
@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"go-desktop-utils/internal/w32"
 )
 
 // StockPrice holds price data for a single ticker.
@@ -88,8 +90,6 @@ type exchangeRateResponse struct {
 	Rates  map[string]float64 `json:"rates"`
 }
 
-// fetchExchangeRates fetches rates and returns them as "JPY per 1 unit of target".
-// The API returns rates relative to baseCurrency (JPY), so we invert them.
 func fetchExchangeRates(cfg *Config) (map[string]float64, error) {
 	url := fmt.Sprintf("https://open.er-api.com/v6/latest/%s", cfg.Exchange.BaseCurrency)
 
@@ -113,14 +113,10 @@ func fetchExchangeRates(cfg *Config) (map[string]float64, error) {
 		return nil, fmt.Errorf("API result: %s", data.Result)
 	}
 
-	// Collect all needed targets from all groups
 	targets := cfg.AllTargets()
-
 	result := make(map[string]float64)
 	for _, target := range targets {
 		if rawRate, ok := data.Rates[target]; ok && rawRate > 0 {
-			// API: 1 JPY = rawRate target_currency
-			// Invert: 1 target = 1/rawRate JPY
 			result[target] = 1.0 / rawRate
 		}
 	}
@@ -129,7 +125,9 @@ func fetchExchangeRates(cfg *Config) (map[string]float64, error) {
 
 // --- Market Data Loop ---
 
-func marketDataLoop(hwnd uintptr, cfg *Config) {
+func (a *App) MarketDataLoop() {
+	cfg := a.Config
+
 	var exchangeTicker *time.Ticker
 	if cfg.Exchange.Enabled {
 		exchangeTicker = time.NewTicker(time.Duration(cfg.Exchange.RefreshMinutes) * time.Minute)
@@ -145,12 +143,11 @@ func marketDataLoop(hwnd uintptr, cfg *Config) {
 		defer stockTicker.Stop()
 	}
 
-	// Immediate first fetch
 	if cfg.Exchange.Enabled {
-		fetchExchange(hwnd, cfg)
+		a.fetchExchange()
 	}
 	if stockFetcher != nil {
-		fetchStocks(hwnd, cfg, stockFetcher)
+		a.fetchStocks(stockFetcher)
 	}
 
 	for {
@@ -158,57 +155,58 @@ func marketDataLoop(hwnd uintptr, cfg *Config) {
 		case exchangeTicker != nil && stockTicker != nil:
 			select {
 			case <-exchangeTicker.C:
-				fetchExchange(hwnd, cfg)
+				a.fetchExchange()
 			case <-stockTicker.C:
-				fetchStocks(hwnd, cfg, stockFetcher)
+				a.fetchStocks(stockFetcher)
 			}
 		case exchangeTicker != nil:
 			<-exchangeTicker.C
-			fetchExchange(hwnd, cfg)
+			a.fetchExchange()
 		case stockTicker != nil:
 			<-stockTicker.C
-			fetchStocks(hwnd, cfg, stockFetcher)
+			a.fetchStocks(stockFetcher)
 		default:
 			return
 		}
 	}
 }
 
-func fetchExchange(hwnd uintptr, cfg *Config) {
-	rates, err := fetchExchangeRates(cfg)
-	appState.mu.Lock()
+func (a *App) fetchExchange() {
+	rates, err := fetchExchangeRates(a.Config)
+	a.State.Mu.Lock()
 	if err != nil {
-		appState.exchangeErr = true
+		a.State.ExchangeErr = true
 	} else {
-		appState.exchangeRates = rates
-		appState.exchangeErr = false
-		appState.exchangeTime = time.Now()
+		a.State.ExchangeRates = rates
+		a.State.ExchangeErr = false
+		a.State.ExchangeTime = time.Now()
 	}
-	appState.mu.Unlock()
-	postRefresh(hwnd)
+	a.State.Mu.Unlock()
+	w32.PostRefresh(a.Hwnd)
 }
 
-func fetchStocks(hwnd uintptr, cfg *Config, fetcher StockFetcher) {
+func (a *App) fetchStocks(fetcher StockFetcher) {
+	cfg := a.Config
 	for _, symbol := range cfg.Stocks.Symbols {
 		sp, err := fetcher.Fetch(symbol)
 
-		appState.mu.Lock()
+		a.State.Mu.Lock()
 		if err != nil {
-			if existing, ok := appState.stockPrices[symbol]; ok {
+			if existing, ok := a.State.StockPrices[symbol]; ok {
 				existing.Error = true
-				appState.stockPrices[symbol] = existing
+				a.State.StockPrices[symbol] = existing
 			} else {
-				appState.stockPrices[symbol] = StockPrice{Error: true}
+				a.State.StockPrices[symbol] = StockPrice{Error: true}
 			}
 		} else {
-			appState.stockPrices[symbol] = sp
-			appState.stockTime = time.Now()
+			a.State.StockPrices[symbol] = sp
+			a.State.StockTime = time.Now()
 		}
-		appState.mu.Unlock()
+		a.State.Mu.Unlock()
 
 		if len(cfg.Stocks.Symbols) > 1 {
 			time.Sleep(15 * time.Second)
 		}
 	}
-	postRefresh(hwnd)
+	w32.PostRefresh(a.Hwnd)
 }
