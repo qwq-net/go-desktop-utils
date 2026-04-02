@@ -104,7 +104,7 @@ func DefaultConfig() Config {
 			Width: 420, Height: 1200, Opacity: 245,
 		},
 		Font: FontConfig{
-			Family: "Segoe UI", Size: 24, BoldTitle: true,
+			Family: "Inter", Size: 24, BoldTitle: true,
 		},
 		Style: StyleConfig{
 			TextColor:      "#FFFFFF",

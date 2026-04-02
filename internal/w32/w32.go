@@ -4,6 +4,7 @@
 package w32
 
 import (
+	"fmt"
 	"sort"
 	"syscall"
 	"unsafe"
@@ -56,14 +57,16 @@ var (
 
 // gdi32.dll
 var (
-	ProcCreateFontW      = gdi32.NewProc("CreateFontW")
-	ProcSelectObject     = gdi32.NewProc("SelectObject")
-	ProcDeleteObject     = gdi32.NewProc("DeleteObject")
-	ProcSetBkMode        = gdi32.NewProc("SetBkMode")
-	ProcSetTextColor     = gdi32.NewProc("SetTextColor")
-	ProcCreateSolidBrush = gdi32.NewProc("CreateSolidBrush")
-	ProcFillRect         = user32.NewProc("FillRect")
-	ProcDrawTextW        = user32.NewProc("DrawTextW")
+	ProcCreateFontW           = gdi32.NewProc("CreateFontW")
+	ProcSelectObject          = gdi32.NewProc("SelectObject")
+	ProcDeleteObject          = gdi32.NewProc("DeleteObject")
+	ProcSetBkMode             = gdi32.NewProc("SetBkMode")
+	ProcSetTextColor          = gdi32.NewProc("SetTextColor")
+	ProcCreateSolidBrush      = gdi32.NewProc("CreateSolidBrush")
+	ProcAddFontMemResourceEx  = gdi32.NewProc("AddFontMemResourceEx")
+	ProcRemoveFontMemResourceEx = gdi32.NewProc("RemoveFontMemResourceEx")
+	ProcFillRect              = user32.NewProc("FillRect")
+	ProcDrawTextW             = user32.NewProc("DrawTextW")
 )
 
 // shell32.dll
@@ -309,6 +312,20 @@ func DrawText(hdc uintptr, text string, rc *RECT, format uint32) int32 {
 		uintptr(format),
 	)
 	return int32(ret)
+}
+
+func AddFontMemResource(data []byte) (uintptr, error) {
+	var numFonts uint32
+	handle, _, err := ProcAddFontMemResourceEx.Call(
+		uintptr(unsafe.Pointer(&data[0])),
+		uintptr(len(data)),
+		0,
+		uintptr(unsafe.Pointer(&numFonts)),
+	)
+	if handle == 0 {
+		return 0, fmt.Errorf("AddFontMemResourceEx: %v", err)
+	}
+	return handle, nil
 }
 
 func CreateGDIFont(name string, size int, bold bool) uintptr {

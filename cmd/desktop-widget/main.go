@@ -11,6 +11,7 @@ import (
 
 	"go-desktop-utils/internal/w32"
 	"go-desktop-utils/internal/widget"
+	"go-desktop-utils/internal/widget/fonts"
 )
 
 var app *widget.App
@@ -19,6 +20,10 @@ func main() {
 	runtime.LockOSThread()
 
 	w32.ProcSetProcessDPIAware.Call()
+
+	if err := fonts.Install(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: embedded font install failed: %v\n", err)
+	}
 
 	cfg, err := widget.LoadConfig()
 	if err != nil {
