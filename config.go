@@ -112,7 +112,7 @@ func defaultConfig() Config {
 			LinePadding:    4,
 			HorizontalPad:  16,
 			BarHeight:      8,
-			TextShadow:     true,
+			TextShadow:     false,
 		},
 		Exchange: ExchangeConfig{
 			BaseCurrency: "JPY",

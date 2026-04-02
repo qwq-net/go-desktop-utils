@@ -29,7 +29,7 @@
     "linePadding": 4,
     "horizontalPad": 16,
     "barHeight": 8,
-    "textShadow": true
+    "textShadow": false
   },
   "exchange": {
     "baseCurrency": "JPY",

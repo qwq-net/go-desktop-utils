@@ -1,0 +1,31 @@
+version: "3"
+
+vars:
+  OUTPUT: desktop-widget.exe
+  LDFLAGS: -H windowsgui -s -w
+
+tasks:
+  build:
+    desc: Build Windows GUI binary
+    cmds:
+      - GOOS=windows GOARCH=amd64 go build -ldflags="{{.LDFLAGS}}" -o {{.OUTPUT}} .
+    sources:
+      - "*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - "{{.OUTPUT}}"
+
+  tidy:
+    desc: Run go mod tidy
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -f {{.OUTPUT}}
+
+  default:
+    desc: Build (default task)
+    deps: [build]
