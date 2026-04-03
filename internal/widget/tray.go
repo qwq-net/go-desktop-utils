@@ -12,7 +12,8 @@ import (
 const (
 	menuIDSettings = 1001
 	menuIDReload   = 1002
-	menuIDExit     = 1003
+	menuIDStartup  = 1003
+	menuIDExit     = 1004
 )
 
 var trayIconData w32.NOTIFYICONDATA
@@ -50,6 +51,13 @@ func ShowTrayMenu(app *App, hwnd uintptr) {
 
 	w32.ProcAppendMenuW.Call(hMenu, w32.MF_STRING, menuIDSettings, uintptr(unsafe.Pointer(w32.UTF16Ptr("Settings"))))
 	w32.ProcAppendMenuW.Call(hMenu, w32.MF_STRING, menuIDReload, uintptr(unsafe.Pointer(w32.UTF16Ptr("Reload Config"))))
+
+	startupFlags := uintptr(w32.MF_STRING)
+	if IsStartupEnabled() {
+		startupFlags |= w32.MF_CHECKED
+	}
+	w32.ProcAppendMenuW.Call(hMenu, startupFlags, menuIDStartup, uintptr(unsafe.Pointer(w32.UTF16Ptr("Run at Startup"))))
+
 	w32.ProcAppendMenuW.Call(hMenu, w32.MF_SEPARATOR, 0, 0)
 	w32.ProcAppendMenuW.Call(hMenu, w32.MF_STRING, menuIDExit, uintptr(unsafe.Pointer(w32.UTF16Ptr("Exit"))))
 
@@ -71,6 +79,8 @@ func ShowTrayMenu(app *App, hwnd uintptr) {
 	case menuIDReload:
 		app.ReloadConfig()
 		w32.ProcInvalidateRect.Call(hwnd, 0, 1)
+	case menuIDStartup:
+		SetStartupEnabled(!IsStartupEnabled())
 	case menuIDExit:
 		w32.ProcDestroyWindow.Call(hwnd)
 	}
