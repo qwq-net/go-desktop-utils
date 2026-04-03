@@ -68,6 +68,9 @@ func main() {
 
 	if cfg.System.Enabled {
 		go app.SysInfoLoop()
+		if cfg.System.Disk {
+			go app.DiskInfoLoop()
+		}
 	}
 	if cfg.Exchange.Enabled || cfg.Stocks.Enabled {
 		go app.MarketDataLoop()

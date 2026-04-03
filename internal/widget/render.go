@@ -14,6 +14,17 @@ type RenderState struct {
 	MemPercent    float64
 	MemUsedGB     float64
 	MemTotalGB    float64
+
+	GpuPercent   float64
+	VramUsedGB   float64
+	VramTotalGB  float64
+	GpuAvailable bool
+
+	DiskDrives []DiskDriveInfo
+
+	NetDownBytesPerSec float64
+	NetUpBytesPerSec   float64
+
 	ExchangeRates map[string]float64
 	ExchangeErr   bool
 	ExchangeTime  string
@@ -43,17 +54,27 @@ func (a *App) snapshotState() RenderState {
 		st = a.State.StockTime.Format("15:04")
 	}
 
+	disks := make([]DiskDriveInfo, len(a.State.DiskDrives))
+	copy(disks, a.State.DiskDrives)
+
 	return RenderState{
-		CpuPercent:    a.State.CpuPercent,
-		MemPercent:    a.State.MemPercent,
-		MemUsedGB:     a.State.MemUsedGB,
-		MemTotalGB:    a.State.MemTotalGB,
-		ExchangeRates: rates,
-		ExchangeErr:   a.State.ExchangeErr,
-		ExchangeTime:  et,
-		StockPrices:   stocks,
-		StockErr:      a.State.StockErr,
-		StockTime:     st,
+		CpuPercent:         a.State.CpuPercent,
+		MemPercent:         a.State.MemPercent,
+		MemUsedGB:          a.State.MemUsedGB,
+		MemTotalGB:         a.State.MemTotalGB,
+		GpuPercent:         a.State.GpuPercent,
+		VramUsedGB:         a.State.VramUsedGB,
+		VramTotalGB:        a.State.VramTotalGB,
+		GpuAvailable:       a.State.GpuAvailable,
+		DiskDrives:         disks,
+		NetDownBytesPerSec: a.State.NetDownBytesPerSec,
+		NetUpBytesPerSec:   a.State.NetUpBytesPerSec,
+		ExchangeRates:      rates,
+		ExchangeErr:        a.State.ExchangeErr,
+		ExchangeTime:       et,
+		StockPrices:        stocks,
+		StockErr:           a.State.StockErr,
+		StockTime:          st,
 	}
 }
 
@@ -286,6 +307,7 @@ func (a *App) drawStockSection(hdc uintptr, state *RenderState, colors ParsedCol
 func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedColors, hFont, hFontBold uintptr, y, pad, contentWidth, lineH int32) int32 {
 	cfg := a.Config
 	barH := int32(cfg.Style.BarHeight)
+	barPad := int32(cfg.Style.LinePadding) * 2
 
 	w32.SelectObject(hdc, hFontBold)
 	rc := w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
@@ -298,21 +320,74 @@ func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedC
 
 	w32.SelectObject(hdc, hFont)
 
+	// CPU
 	rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 	drawShadowedText(a, hdc, fmt.Sprintf("CPU  %.1f%%", state.CpuPercent), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
 	y += lineH
-
 	drawBarGraph(a, hdc, pad, y, contentWidth, barH, state.CpuPercent, colors)
-	y += barH + int32(cfg.Style.LinePadding)*2
+	y += barH + barPad
 
+	// MEM
 	rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 	drawShadowedText(a, hdc, fmt.Sprintf("MEM  %.1f%%  %.1f/%.1f GB", state.MemPercent, state.MemUsedGB, state.MemTotalGB), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
 	y += lineH
-
 	drawBarGraph(a, hdc, pad, y, contentWidth, barH, state.MemPercent, colors)
-	y += barH + int32(cfg.Style.LinePadding)
+	y += barH + barPad
+
+	// GPU
+	if cfg.System.GPU && state.GpuAvailable {
+		rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
+		drawShadowedText(a, hdc, fmt.Sprintf("GPU  %.1f%%", state.GpuPercent), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
+		y += lineH
+		drawBarGraph(a, hdc, pad, y, contentWidth, barH, state.GpuPercent, colors)
+		y += barH + barPad
+
+		// VRAM
+		vramPercent := 0.0
+		if state.VramTotalGB > 0 {
+			vramPercent = state.VramUsedGB / state.VramTotalGB * 100.0
+		}
+		rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
+		drawShadowedText(a, hdc, fmt.Sprintf("VRAM  %.1f%%  %.1f/%.1f GB", vramPercent, state.VramUsedGB, state.VramTotalGB), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
+		y += lineH
+		drawBarGraph(a, hdc, pad, y, contentWidth, barH, vramPercent, colors)
+		y += barH + barPad
+	}
+
+	// DISK
+	if cfg.System.Disk {
+		for _, d := range state.DiskDrives {
+			rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
+			drawShadowedText(a, hdc, fmt.Sprintf("%s:  %.1f%%  %.1f/%.1f GB", d.Letter, d.Percent, d.UsedGB, d.TotalGB), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
+			y += lineH
+			drawBarGraph(a, hdc, pad, y, contentWidth, barH, d.Percent, colors)
+			y += barH + barPad
+		}
+	}
+
+	// NET
+	if cfg.System.Network {
+		rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
+		downStr := formatNetSpeed(state.NetDownBytesPerSec)
+		upStr := formatNetSpeed(state.NetUpBytesPerSec)
+		drawShadowedText(a, hdc, fmt.Sprintf("NET  \u2193 %s  \u2191 %s", downStr, upStr), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
+		y += lineH
+	}
 
 	return y
+}
+
+func formatNetSpeed(bytesPerSec float64) string {
+	switch {
+	case bytesPerSec >= 1024*1024*1024:
+		return fmt.Sprintf("%.1f GB/s", bytesPerSec/(1024*1024*1024))
+	case bytesPerSec >= 1024*1024:
+		return fmt.Sprintf("%.1f MB/s", bytesPerSec/(1024*1024))
+	case bytesPerSec >= 1024:
+		return fmt.Sprintf("%.1f KB/s", bytesPerSec/1024)
+	default:
+		return fmt.Sprintf("%.0f B/s", bytesPerSec)
+	}
 }
 
 func drawBarGraph(app *App, hdc uintptr, x, y, width, height int32, percent float64, colors ParsedColors) {

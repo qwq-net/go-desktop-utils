@@ -52,6 +52,9 @@
     "columns": 2
   },
   "system": {
-    "enabled": true
+    "enabled": true,
+    "gpu": true,
+    "disk": true,
+    "network": true
   }
 }

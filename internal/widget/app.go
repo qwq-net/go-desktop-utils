@@ -18,6 +18,14 @@ type App struct {
 	Embedded bool
 }
 
+// DiskDriveInfo holds usage info for a single drive.
+type DiskDriveInfo struct {
+	Letter  string
+	Percent float64
+	UsedGB  float64
+	TotalGB float64
+}
+
 // AppState holds all shared data, protected by Mu.
 type AppState struct {
 	Mu sync.Mutex
@@ -26,6 +34,16 @@ type AppState struct {
 	MemPercent float64
 	MemUsedGB  float64
 	MemTotalGB float64
+
+	GpuPercent   float64
+	VramUsedGB   float64
+	VramTotalGB  float64
+	GpuAvailable bool
+
+	DiskDrives []DiskDriveInfo
+
+	NetDownBytesPerSec float64
+	NetUpBytesPerSec   float64
 
 	ExchangeRates map[string]float64
 	ExchangeErr   bool

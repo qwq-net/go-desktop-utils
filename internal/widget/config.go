@@ -81,6 +81,9 @@ type StocksConfig struct {
 
 type SystemConfig struct {
 	Enabled bool `json:"enabled"`
+	GPU     bool `json:"gpu"`
+	Disk    bool `json:"disk"`
+	Network bool `json:"network"`
 }
 
 type ParsedColors struct {
@@ -146,6 +149,9 @@ func DefaultConfig() Config {
 		},
 		System: SystemConfig{
 			Enabled: true,
+			GPU:     true,
+			Disk:    true,
+			Network: true,
 		},
 	}
 }
