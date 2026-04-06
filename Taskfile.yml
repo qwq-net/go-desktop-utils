@@ -23,7 +23,7 @@ tasks:
       - go mod tidy
 
   dist:
-    desc: Create distribution zip (usage: task dist VERSION=v1.0.0)
+    desc: "Create distribution zip (usage: task dist VERSION=v1.0.0)"
     deps: [build]
     vars:
       DIST_DIR: dist/desktop-widget
