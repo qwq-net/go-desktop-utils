@@ -23,16 +23,17 @@ tasks:
       - go mod tidy
 
   dist:
-    desc: Create distribution zip
+    desc: Create distribution zip (usage: task dist VERSION=v1.0.0)
     deps: [build]
     vars:
       DIST_DIR: dist/desktop-widget
+      ZIP_NAME: 'desktop-widget{{if .VERSION}}-{{.VERSION}}{{end}}.zip'
     cmds:
       - rm -rf dist
       - mkdir -p {{.DIST_DIR}}
       - cp {{.OUTPUT}} {{.DIST_DIR}}/
       - cp configs/config.json {{.DIST_DIR}}/
-      - cd dist && zip -r desktop-widget.zip desktop-widget/
+      - cd dist && zip -r {{.ZIP_NAME}} desktop-widget/
 
   clean:
     desc: Remove build artifacts
