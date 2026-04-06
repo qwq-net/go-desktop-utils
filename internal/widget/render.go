@@ -307,6 +307,7 @@ func (a *App) drawStockSection(hdc uintptr, state *RenderState, colors ParsedCol
 func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedColors, hFont, hFontBold uintptr, y, pad, contentWidth, lineH int32) int32 {
 	cfg := a.Config
 	barH := int32(cfg.Style.BarHeight)
+	barGap := int32(cfg.Style.LinePadding)
 	barPad := int32(cfg.Style.LinePadding) * 2
 
 	w32.SelectObject(hdc, hFontBold)
@@ -323,14 +324,14 @@ func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedC
 	// CPU
 	rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 	drawShadowedText(a, hdc, fmt.Sprintf("CPU  %.1f%%", state.CpuPercent), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
-	y += lineH
+	y += lineH + barGap
 	drawBarGraph(a, hdc, pad, y, contentWidth, barH, state.CpuPercent, colors)
 	y += barH + barPad
 
 	// MEM
 	rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 	drawShadowedText(a, hdc, fmt.Sprintf("MEM  %.1f%%  %.1f/%.1f GB", state.MemPercent, state.MemUsedGB, state.MemTotalGB), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
-	y += lineH
+	y += lineH + barGap
 	drawBarGraph(a, hdc, pad, y, contentWidth, barH, state.MemPercent, colors)
 	y += barH + barPad
 
@@ -338,7 +339,7 @@ func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedC
 	if cfg.System.GPU && state.GpuAvailable {
 		rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 		drawShadowedText(a, hdc, fmt.Sprintf("GPU  %.1f%%", state.GpuPercent), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
-		y += lineH
+		y += lineH + barGap
 		drawBarGraph(a, hdc, pad, y, contentWidth, barH, state.GpuPercent, colors)
 		y += barH + barPad
 
@@ -349,7 +350,7 @@ func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedC
 		}
 		rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 		drawShadowedText(a, hdc, fmt.Sprintf("VRAM  %.1f%%  %.1f/%.1f GB", vramPercent, state.VramUsedGB, state.VramTotalGB), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
-		y += lineH
+		y += lineH + barGap
 		drawBarGraph(a, hdc, pad, y, contentWidth, barH, vramPercent, colors)
 		y += barH + barPad
 	}
@@ -359,7 +360,7 @@ func (a *App) drawSysInfoSection(hdc uintptr, state *RenderState, colors ParsedC
 		for _, d := range state.DiskDrives {
 			rc = w32.RECT{Left: pad, Top: y, Right: pad + contentWidth, Bottom: y + lineH}
 			drawShadowedText(a, hdc, fmt.Sprintf("%s:  %.1f%%  %.1f/%.1f GB", d.Letter, d.Percent, d.UsedGB, d.TotalGB), &rc, w32.DT_LEFT|w32.DT_SINGLELINE|w32.DT_NOCLIP, colors.Text)
-			y += lineH
+			y += lineH + barGap
 			drawBarGraph(a, hdc, pad, y, contentWidth, barH, d.Percent, colors)
 			y += barH + barPad
 		}
