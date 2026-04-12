@@ -16,6 +16,7 @@ var (
 	kernel32 = syscall.NewLazyDLL("kernel32.dll")
 	gdi32    = syscall.NewLazyDLL("gdi32.dll")
 	shell32  = syscall.NewLazyDLL("shell32.dll")
+	comctl32 = syscall.NewLazyDLL("comctl32.dll")
 )
 
 // user32.dll
@@ -53,6 +54,12 @@ var (
 	ProcSetWindowLongPtrW          = user32.NewProc("SetWindowLongPtrW")
 	ProcEnumDisplayMonitors        = user32.NewProc("EnumDisplayMonitors")
 	ProcGetMonitorInfoW            = user32.NewProc("GetMonitorInfoW")
+	ProcSendMessageW               = user32.NewProc("SendMessageW")
+)
+
+// comctl32.dll
+var (
+	ProcInitCommonControlsEx = comctl32.NewProc("InitCommonControlsEx")
 )
 
 // gdi32.dll
@@ -67,6 +74,11 @@ var (
 	ProcRemoveFontMemResourceEx = gdi32.NewProc("RemoveFontMemResourceEx")
 	ProcFillRect              = user32.NewProc("FillRect")
 	ProcDrawTextW             = user32.NewProc("DrawTextW")
+	ProcCreateDCW             = gdi32.NewProc("CreateDCW")
+	ProcDeleteDC              = gdi32.NewProc("DeleteDC")
+	ProcGetDeviceGammaRamp    = gdi32.NewProc("GetDeviceGammaRamp")
+	ProcSetDeviceGammaRamp    = gdi32.NewProc("SetDeviceGammaRamp")
+	ProcGetStockObject        = gdi32.NewProc("GetStockObject")
 )
 
 // shell32.dll
@@ -171,6 +183,56 @@ const (
 // MonitorInfo
 const MONITORINFOF_PRIMARY = 0x00000001
 
+// Window styles (additional)
+const (
+	WS_CAPTION = 0x00C00000
+	WS_SYSMENU = 0x00080000
+)
+
+// Window messages (additional)
+const (
+	WM_CLOSE   = 0x0010
+	WM_SETTEXT = 0x000C
+	WM_SETFONT = 0x0030
+	WM_COMMAND = 0x0111
+	WM_HSCROLL = 0x0114
+)
+
+// ComboBox
+const (
+	CBS_DROPDOWNLIST = 0x0003
+	CBS_HASSTRINGS   = 0x0200
+	CB_ADDSTRING     = 0x0143
+	CB_SETCURSEL     = 0x014E
+	CB_GETCURSEL     = 0x0147
+	CBN_SELCHANGE    = 1
+)
+
+// Trackbar
+const (
+	TBS_HORZ       = 0x0000
+	TBS_AUTOTICKS  = 0x0001
+	TBM_GETPOS     = 0x0400
+	TBM_SETPOS     = 0x0405
+	TBM_SETRANGE   = 0x0406
+	TBM_SETTICFREQ = 0x0414
+)
+
+// Button / Static
+const (
+	BS_PUSHBUTTON = 0x00000000
+	SS_LEFT       = 0x00000000
+)
+
+// Common controls
+const ICC_BAR_CLASSES = 0x0004
+
+// Stock objects
+const (
+	DEFAULT_GUI_FONT = 17
+	COLOR_BTNFACE    = 15
+)
+
 // Structs
 
 type WNDCLASSEX struct {
@@ -239,9 +301,29 @@ type MONITORINFO struct {
 	DwFlags   uint32
 }
 
+type MONITORINFOEX struct {
+	CbSize    uint32
+	RcMonitor RECT
+	RcWork    RECT
+	DwFlags   uint32
+	SzDevice  [32]uint16
+}
+
+type INITCOMMONCONTROLSEX struct {
+	DwSize uint32
+	DwICC  uint32
+}
+
+type GAMMARAMP struct {
+	Red   [256]uint16
+	Green [256]uint16
+	Blue  [256]uint16
+}
+
 type MonitorDesc struct {
-	WorkArea  RECT
-	IsPrimary bool
+	WorkArea   RECT
+	IsPrimary  bool
+	DeviceName string
 }
 
 // Helpers
@@ -402,12 +484,13 @@ func EnumMonitors() []MonitorDesc {
 
 	ProcEnumDisplayMonitors.Call(0, 0,
 		syscall.NewCallback(func(hMonitor, hdcMonitor, lprcMonitor, dwData uintptr) uintptr {
-			var mi MONITORINFO
+			var mi MONITORINFOEX
 			mi.CbSize = uint32(unsafe.Sizeof(mi))
 			ProcGetMonitorInfoW.Call(hMonitor, uintptr(unsafe.Pointer(&mi)))
 			monitors = append(monitors, MonitorDesc{
-				WorkArea:  mi.RcWork,
-				IsPrimary: mi.DwFlags&MONITORINFOF_PRIMARY != 0,
+				WorkArea:   mi.RcWork,
+				IsPrimary:  mi.DwFlags&MONITORINFOF_PRIMARY != 0,
+				DeviceName: syscall.UTF16ToString(mi.SzDevice[:]),
 			})
 			return 1
 		}),
@@ -435,6 +518,29 @@ func CalcPosition(workArea RECT, alignment string, marginX, marginY, width, heig
 	default: // "topRight"
 		return int(workArea.Right) - width - marginX, int(workArea.Top) + marginY
 	}
+}
+
+func LOWORD(v uintptr) uint16 { return uint16(v) }
+func HIWORD(v uintptr) uint16 { return uint16(v >> 16) }
+func MAKELONG(lo, hi uint16) uintptr {
+	return uintptr(lo) | uintptr(hi)<<16
+}
+
+func InitCommonControls() {
+	var icc INITCOMMONCONTROLSEX
+	icc.DwSize = uint32(unsafe.Sizeof(icc))
+	icc.DwICC = ICC_BAR_CLASSES
+	ProcInitCommonControlsEx.Call(uintptr(unsafe.Pointer(&icc)))
+}
+
+func GetStockFont() uintptr {
+	h, _, _ := ProcGetStockObject.Call(DEFAULT_GUI_FONT)
+	return h
+}
+
+func SendMessage(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
+	ret, _, _ := ProcSendMessageW.Call(hwnd, uintptr(msg), wParam, lParam)
+	return ret
 }
 
 func ShellOpen(path string) {

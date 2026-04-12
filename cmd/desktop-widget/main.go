@@ -20,6 +20,7 @@ func main() {
 	runtime.LockOSThread()
 
 	w32.ProcSetProcessDPIAware.Call()
+	w32.InitCommonControls()
 
 	if err := fonts.Install(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: embedded font install failed: %v\n", err)
@@ -78,6 +79,7 @@ func main() {
 
 	messageLoop()
 
+	widget.ResetAllGamma()
 	widget.RemoveTrayIcon()
 }
 
